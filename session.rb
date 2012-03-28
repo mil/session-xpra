@@ -7,6 +7,29 @@ program :version, '1.0.0'
 program :description, 'A CLI to using the xpra tool to save session names and manage'
 
 
+
+
+
+#Uber simway to colorize outputin
+class String
+	def color(c)
+		colors = { 
+			:black   => 30, 
+			:red     => 31, 
+			:green   => 32, 
+			:yellow  => 33, 
+			:blue    => 34, 
+			:magenta => 35, 
+			:cyan    => 36, 
+			:white   => 37 
+		}
+		return "\e[#{colors[c] || c}m#{self}\e[0m"
+	end
+end
+
+
+puts "test"
+
 $sessionsFile = "#{ENV['XDG_DATA_HOME']}/session-xpra/sessions"
 $sessions = Hash.new
 
@@ -22,7 +45,11 @@ command :start do |c|
 	c.description = "Starts an xpra session"
 
 	#Required
-	c.option '--run STRING',  String, "Specifies a command to start with the session"
+	c.option '--run STRING',  String, "Specifies a co"
+	c.description = "Starts an xpra session"
+
+	#Required
+	c.option '--run STRING',  String, "Specifies a commmand to start with the session"
 
 	#Optional
 	c.option '--name STRING', String, "Specifies the name of the session"
@@ -75,13 +102,49 @@ command :list do |c|
 	c.syntax = 'session list'
 	c.description = 'Displays a list of the sessions currently managed'
 	c.action do |args|
+		loadSessions
+
+		puts "Session Name\tCommand\t\tDisplay"
+		$sessions.each do |name, info|
+			puts "#{name.color(:green)}\t\t#{info['run'].color(:red)}\t\t#{info['display'].to_s.color(:blue)}"
+		end
+
 	end
+end
+
+command :attach do |c|
+	c.syntax = 'session attach session-name'
+	c.description = "Attach a session to the current display"
+	c.option '--name STRING', String, "Specifies the name of the session"
+	c.action do |args|
+		loadSessions
+
+		$sessions.each do |name,info|
+		end
+
+
+		storeSessions
+	end
+
+
+
 end
 
 command :clear do |c|
 	c.syntax      = 'session clear'
 	c.description = "Clears all sessions"
 	c.action do |args|
+		loadSessions
+
+		puts "Clearing all sessions"
+		$sessions.each do |name, info|
+			%[xpra stop :#{info['display']}]
+		end
+		%[killall xpra]
+
+		$sessions = {}
+		storeSessions
+
 	end
 end
 
@@ -98,7 +161,8 @@ def loadSessions
 	#Convert serialized JSON into sessionsS
 	begin
 		$sessions = JSON.parse(File.read($sessionsFile).to_s)
-	rescue
+	rescue 
 		puts "Unable to parse JSON"
 	end
 end
+
